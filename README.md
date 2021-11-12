@@ -2,10 +2,11 @@
 
 ## Description
 
-OpenWrt/LEDE Node.js Packages : for trunk / openwrt-19.07
+OpenWrt/LEDE Node.js Packages : for Head (Development branch)
 
-Note: support arches are aarch64, arm, mipsel, mips64el, x86_64
-      (mipseb & mips64eb & i386 are not supported)
+Note: support arches are aarch64, arm, x86_64
+
+***MIPS without hardware FPU no longer be supported***
 
 ## License
 
@@ -24,48 +25,37 @@ Run
 rm ./package/feeds/packages/node
 rm ./package/feeds/packages/node-*
 ./scripts/feeds install -a -p node
+make defconfig
 ```
 
+## Request to add a package is welcome
+If you want a new module (native module) that requires a precompiled binary, ***please open the issue.***
+
 ## Note
-OpenWrt Attitude Adjustment(12.09), Barrier Breaker(14.07), Chaos Calmer(15.05) , LEDE(17.01) , 18.06 are not supported.
+If you want to use with Chaos Calmer(15.05), see [for-15.05 branch](https://github.com/nxhack/openwrt-node-packages/tree/for-15.05) (***End of life***)
 
-If you want to use with Chaos Calmer(15.05), see [for-15.05 branch](https://github.com/nxhack/openwrt-node-packages/tree/for-15.05)
+If you want to use with LEDE (17.01), see [lede-17.01 branch](https://github.com/nxhack/openwrt-node-packages/tree/lede-17.01) (***End of life***)
 
-If you want to use with LEDE (17.01), see [lede-17.01 branch](https://github.com/nxhack/openwrt-node-packages/tree/lede-17.01)
+If you want to use with 18.06, see [openwrt-18.06 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-18.06) (***End of life***)
 
+If you want to use with 19.07, see [openwrt-19.07 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-19.07) (***MIPS FPU EMULATOR support***)
 
-If you want to use with 18.06, see [openwrt-18.06 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-18.06)
+If you want to use with 21.02, see [openwrt-21.02 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-21.02) (***MIPS is no longer supported***)
 
-
-mips(be) will no longer be supported because nosnapshot build is deprecated.
-
-Openssl 1.0.x becomes EoL, openwrt-18.06 will not be supported.
+OpenSSL 1.0.x becomes EoL, OpenWrt-18.06 will not be supported.
 Python2 becomes EoL, node v8.x will not be supported.
 
 On the host side, the following preparations are required.
-* GCC 6.3 or higher is required.
+* [Unix prerequisites](https://github.com/nodejs/node/blob/master/BUILDING.md#unix-prerequisites)
 * To build a 32-bit target, gcc-multilib, g++-multilib are required.
 * The libatomic package is required. (Install the 32-bit library at the same time, if necessary).
 
 ## Illegal instruction issue
 
-***V8 JIT code generates FP instruction. Node.js does not work without hardware FPU or kernel FPU emulation.***
+***V8 JIT code generates FP instruction. Node.js does not work without hardware FPU.***
 
-If you are running nodejs with Atheros AR71xx, AR933x, you need to create the ***kernel*** using the MIPS_FPU_EMULATOR option.
-
-***(This means that you need to rebuild the firmware.)***
-
-You can configure using menuconfig.
-```
-make menuconfig
-```
-> Global build settings  --->
->
-> Kernel build options  --->
->
->  [*] Compile the kernel with MIPS FPU Emulator
-
-ARM cores without vfp or neon (such as ***bcm53xx***) will not work either. In this case, there is no solution.
+If you are running nodejs on the Atheros AR71xx/AR933x, MediaTek MT76x8, it will not work because there is no hardware FPU.
+ARM cores without vfp or neon (such as ***bcm53xx***) will not work either.
 
 ## Enable Inspector
 
@@ -73,7 +63,6 @@ ARM cores without vfp or neon (such as ***bcm53xx***) will not work either. In t
 | :---: | --- | :---: |
 | 32bit | Disable | NO |
 | 32bit | small-icu | YES |
-| 32bit | system-icu | NO |
 | 64bit | Disable | NO |
 | 64bit | small-icu | YES |
 | 64bit | system-icu | YES |
@@ -81,19 +70,6 @@ ARM cores without vfp or neon (such as ***bcm53xx***) will not work either. In t
  [Debugging Guide](https://nodejs.org/en/docs/guides/debugging-getting-started/) ***Nice to use Chrome DevTools.***
 
  Note: ICU currently supports only ***LITTLE ENDIAN***.
-
-## homebridge on mips with kernel FPU emulation
-In many cases, it does not work because key generation is slow.
-
-In the case of such devices, this may be useful.
-
-[https://github.com/etwmc/Personal-HomeKit-HAP](https://github.com/etwmc/Personal-HomeKit-HAP)
-
-However, you have to program the accessories yourself.
-
-Here are some tips for cross compiling with OpenWrt.
-
-[https://github.com/nxhack/openwrt-custom-packages/tree/master/PHK](https://github.com/nxhack/openwrt-custom-packages/tree/master/PHK)
 
 ## Note about mDNS and homebridge
 ***If you use node-homebridge(node-hap-nodejs), please install mDNS package (umdns / avahi-dbus-daemon / mdnsresponder).***
@@ -117,7 +93,7 @@ Also, you have to enable: dbus and avahi-daemon services to start automatically,
 (2)
 avahi on home network
 
-Please read this document. '[Why avahi and bonjour don't work on your home network](https://bitbucket.org/marc_culler/querierd/)'
+Please read this document. '[Why avahi and bonjour don't work on your home network](https://github.com/culler/querierd/blob/master/README.rst)'
 
 ***IGMP-querier*** will solve your problem.
 
@@ -127,71 +103,47 @@ OpenWrt custom packages available: https://github.com/nxhack/openwrt-custom-pack
 Specify v8-options.
 
 ```
---max_old_space_size=20 --initial_old_space_size=4 --max_semi_space_size=2 --max_executable_size=5 --optimize_for_size
+--max_old_space_size=80
 ```
 
 Or use [swap](https://openwrt.org/docs/guide-user/storage/fstab?s[]=swap).
 
 ## Modules that use pre-compiled binary (native module)
 ```
-node-alljoyn			[mark @BROKEN]
-node-arduino-firmata		(serialport)
 node-authenticate-pam
+node-aws-crt
+node-bcryp
 node-bignum
-node-binaryjs			(streamws)
-node-bleacon			(bignum,bluetooth-hci-socket)
-node-bluetooth-hci-socket	(usb)
+node-bluetooth-hci-socket
 node-bufferutil
-node-cylon-firmata		(firmata)
+node-deasync
 node-ejdb2_node
-node-enocean-utils		(serialport)
 node-epoll
 node-expat
-node-ffi			(ffi, ref)
-node-firmata			(serialport)
+node-ffi-napi			(ffi-napi, ref-napi)
 node-fuse-bindings
-node-hashtable			[mark @BROKEN: use node-megahash]
 node-hid
-node-hid-stream			(node-hid)
+node-pty-prebuilt-multiarch
 node-i2c-bus
-node-ideino-linino-lib		(epoll)
-node-johnny-five		(firmata, serialport)
-node-level			(leveldown)
 node-leveldown
 node-megahash
-node-mdns			[need select 'y'[*] libavahi-compat-libdnssd for InstallDev libdns_sd.so]
-node-mknod			[mark @BROKEN]
-node-muzzley-client		(ws[legacy])
+node-mdns
 node-net-ping			(raw-socket)
-node-nitrogen			(ws[legacy])
-node-nitrogen-cli		(ws[legacy])
-node-onoff			(epoll)
+node-openzwave-shared
 node-pi-spi
 node-pty
-node-red			(bcrypt)
-node-red-contrib-gpio		(johnny-five)
-node-red-contrib-homekit	(hap-nodejs)
-node-red-contrib-modbus		(@serialport/bindings)
-node-red-node-arduino		(firmata)
-node-reverse-wstunnel
-node-rpi-gpio			(epoll)
 node-rpio
-node-serialport			(@serialport/bindings)
-node-serialport-bindings	(@serialport/bindings)
+node-serialport-bindings
 node-sleep
-node-socket.io-client-legacy	(ws[legacy])
-node-socket.io-legacy		(ws[legacy])
 node-spi-device
 node-sqlite3
 node-statvfs
+node-ubus
 node-usb
 node-utf-8-validate
-node-websocket
-node-zigbee2mqtt		(@serialport/bindings)
+node-zigbee2mqtt		(@serialport/bindings,unix-dgram)
 ```
 Other modules can be installed by 'npm install'.
-
-***If you want a new module (native module) that requires a precompiled binary, please open the issue.***
 
 ## Package Guidelines
 

@@ -6,16 +6,23 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=node
 
-ifeq ($(CONFIG_NODEJS_10),y)
-PKG_VERSION:=v10.21.0
+ifeq ($(CONFIG_NODEJS_16),y)
+PKG_VERSION:=v16.13.0
 PKG_RELEASE:=1
-PKG_HASH:=26b01fa28338cacaa8a66d7963ab2514e81678c268ab52ec55dcf937aadcb73b
-PATCH_DIR:=./patches/v10.x
+PKG_HASH:=32114b3dc3945ed0f95f8bc33b42c68e0ef18c408cb56122572a163d907ecbcc
+PATCH_DIR:=./patches/v16.x
 else
-PKG_VERSION:=v12.18.0
+ifeq ($(CONFIG_NODEJS_14),y)
+PKG_VERSION:=v14.18.1
 PKG_RELEASE:=1
-PKG_HASH:=d4688636a378367f5157f02bd5c13902f5c193356f8f7a35c99dfa383b03b13f
+PKG_HASH:=3fa1d71adddfab2f5e3e41874b4eddbdf92b65cade4a43922fb1e437afcf89ed
+PATCH_DIR:=./patches/v14.x
+else
+PKG_VERSION:=v12.22.7
+PKG_RELEASE:=1
+PKG_HASH:=cc6a23b44870679a94bd8f3c8d4e1f4b77bb2712a36888ab87463459e6785f6b
 PATCH_DIR:=./patches/v12.x
+endif
 endif
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
@@ -44,9 +51,9 @@ define Package/node
   SUBMENU:=Node.js
   TITLE:=Node.js is a platform built on Chrome's JavaScript runtime
   URL:=https://nodejs.org/
-  DEPENDS:=@(HAS_FPU||KERNEL_MIPS_FPU_EMULATOR) @!arc @!armeb @!powerpc \
-	   +libstdcpp +libopenssl +zlib +libnghttp2 +libuv +libhttp-parser \
-	   +libcares +libatomic +NODEJS_ICU_SYSTEM:icu +NODEJS_ICU_SYSTEM:icu-full-data
+  DEPENDS:=@HAS_FPU @(i386||x86_64||arm||aarch64||mipsel) \
+	   +libstdcpp +libopenssl +zlib +libnghttp2 +libuv \
+	   +libatomic +NODEJS_ICU_SYSTEM:icu +NODEJS_ICU_SYSTEM:icu-full-data
 endef
 
 define Package/node/description
@@ -55,7 +62,7 @@ define Package/node/description
    package ecosystem, npm, is the largest ecosystem of open source libraries in the world.
 
   *** The following preparations must be made on the host side. ***
-      1. gcc 6.3 or higher is required.
+      1. gcc 8.3 or higher is required.
       2. To build a 32-bit target, gcc-multilib, g++-multilib are required.
       3. Requires libatomic package. (If necessary, install the 32-bit library at the same time.)
      ex) sudo apt-get install gcc-multilib g++-multilib
@@ -80,20 +87,23 @@ define Package/node/config
 
 	choice
 		prompt "Version Selection"
-		default NODEJS_12
+		default NODEJS_16
 		help
 		 Select node.js version.
 
-		config NODEJS_10
-			bool "10.x Active LTS"
-
 		config NODEJS_12
-			bool "12.x Active LTS"
+			bool "12.x Maintenance LTS"
+
+		config NODEJS_14
+			bool "14.x Maintenance LTS"
+
+		config NODEJS_16
+			bool "16.x Active LTS"
 	endchoice
 
 	choice
 		prompt "i18n features"
-		default NODEJS_ICU_NONE
+		default NODEJS_ICU_SMALL
 		help
 		 Select i18n features
 
@@ -101,22 +111,17 @@ define Package/node/config
 			bool "Disable"
 
 		config NODEJS_ICU_SMALL
-			depends on !BIG_ENDIAN
 			bool "small-icu"
 
 		config NODEJS_ICU_SYSTEM
-			depends on ARCH_64BIT&&!BIG_ENDIAN
+			depends on ARCH_64BIT
 			bool "system-icu"
 	endchoice
 
 	endmenu
 endef
 
-NODEJS_CPU:=$(subst powerpc,ppc,$(subst aarch64,arm64,$(subst x86_64,x64,$(subst i386,ia32,$(ARCH)))))
-
-ifeq ($(CONFIG_NODEJS_10),y)
-TARGET_LDFLAGS+=-latomic
-endif
+NODEJS_CPU:=$(subst aarch64,arm64,$(subst x86_64,x64,$(subst i386,ia32,$(ARCH))))
 
 ifneq ($(CONFIG_ARCH_64BIT),y)
 FORCE_32BIT:=-m32
@@ -124,7 +129,10 @@ endif
 
 MAKE_VARS+= \
 	DESTCPU=$(NODEJS_CPU) \
+	NO_LOAD='cctest.target.mk embedtest.target.mk node_mksnapshot.target.mk' \
 	LD_LIBRARY_PATH=$(STAGING_DIR_HOSTPKG)/share/icu/current/lib
+
+HOST_MAKE_VARS+=NO_LOAD='cctest.target.mk embedtest.target.mk'
 
 CONFIGURE_VARS:= \
 	CC="$(TARGET_CC) $(TARGET_OPTIMIZATION)" \
@@ -140,12 +148,7 @@ CONFIGURE_ARGS:= \
 	--shared-openssl \
 	--shared-nghttp2 \
 	--shared-libuv \
-	--shared-http-parser \
-	--shared-cares \
-	$(if $(CONFIG_NODEJS_ICU_SMALL),, \
-		--with-intl=$(if $(CONFIG_NODEJS_ICU_SYSTEM),system-icu,none)) \
-	$(if $(findstring mips,$(NODEJS_CPU)), \
-		$(if $(CONFIG_SOFT_FLOAT),--with-mips-float-abi=soft)) \
+	--with-intl=$(if $(CONFIG_NODEJS_ICU_SMALL),small-icu,$(if $(CONFIG_NODEJS_ICU_SYSTEM),system-icu,none)) \
 	$(if $(findstring +neon,$(CONFIG_CPU_TYPE)),--with-arm-fpu=neon) \
 	$(if $(findstring +vfp",$(CONFIG_CPU_TYPE)),--with-arm-fpu=vfp) \
 	$(if $(findstring +vfpv3",$(CONFIG_CPU_TYPE)),--with-arm-fpu=vfpv3-d16) \
@@ -155,7 +158,7 @@ CONFIGURE_ARGS:= \
 HOST_CONFIGURE_VARS:=
 HOST_CONFIGURE_ARGS:= \
 	--dest-os=$(if $(findstring Darwin,$(HOST_OS)),mac,linux) \
-	--with-intl=none \
+	--with-intl=small-icu \
 	--prefix=$(STAGING_DIR_HOSTPKG)
 
 define Build/InstallDev
@@ -169,11 +172,21 @@ define Package/node/install
 endef
 
 define Package/node-npm/install
-	$(INSTALL_DIR) $(1)/usr/lib/node_modules
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules/* $(1)/usr/lib/node_modules/
+	$(INSTALL_DIR) $(1)/usr/lib/node_modules/npm
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules/npm/{package.json,LICENSE} \
+		$(1)/usr/lib/node_modules/npm/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules/npm/README.md \
+		$(1)/usr/lib/node_modules/npm/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/node_modules/npm/{node_modules,bin,lib} \
+		$(1)/usr/lib/node_modules/npm/
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(LN) ../lib/node_modules/npm/bin/npm-cli.js $(1)/usr/bin/npm
 	$(LN) ../lib/node_modules/npm/bin/npx-cli.js $(1)/usr/bin/npx
+endef
+
+define Package/node-npm/postrm
+#!/bin/sh
+rm -rf /usr/lib/node_modules/npm || true
 endef
 
 $(eval $(call HostBuild))
