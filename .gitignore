@@ -3,6 +3,8 @@
 .*.swp
 *.orig
 *.rej
+.env
+.env.*
 *~
 .#*
 *#
@@ -16,3 +18,4 @@ tmp
 aaa
 aaa.sh
 aaa.patch
+aaa.diff

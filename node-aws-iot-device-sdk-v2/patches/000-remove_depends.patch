@@ -1,9 +1,10 @@
 --- a/package.json
 +++ b/package.json
-@@ -30,6 +30,5 @@
-     "typescript": "^3.9.7"
+@@ -45,7 +45,6 @@
    },
    "dependencies": {
--    "aws-crt": "1.6.4"
+     "@aws-sdk/util-utf8-browser": "^3.109.0",
+-    "aws-crt": "1.29.0",
+     "uuid": "^8.3.2"
    }
  }

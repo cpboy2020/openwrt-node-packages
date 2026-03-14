@@ -2,11 +2,9 @@
 
 ## Description
 
-OpenWrt/LEDE Node.js Packages : for Head (Development branch)
+OpenWrt Node.js Packages : for Head (Development branch)
 
 Note: support arches are aarch64, arm, x86_64
-
-***MIPS without hardware FPU no longer be supported***
 
 ## License
 
@@ -32,22 +30,14 @@ make defconfig
 If you want a new module (native module) that requires a precompiled binary, ***please open the issue.***
 
 ## Note
-If you want to use with Chaos Calmer(15.05), see [for-15.05 branch](https://github.com/nxhack/openwrt-node-packages/tree/for-15.05) (***End of life***)
-
-If you want to use with LEDE (17.01), see [lede-17.01 branch](https://github.com/nxhack/openwrt-node-packages/tree/lede-17.01) (***End of life***)
-
-If you want to use with 18.06, see [openwrt-18.06 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-18.06) (***End of life***)
-
-If you want to use with 19.07, see [openwrt-19.07 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-19.07) (***MIPS FPU EMULATOR support***)
-
-If you want to use with 21.02, see [openwrt-21.02 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-21.02) (***MIPS is no longer supported***)
-
-OpenSSL 1.0.x becomes EoL, OpenWrt-18.06 will not be supported.
-Python2 becomes EoL, node v8.x will not be supported.
+If you want to use with 24.10, see [openwrt-24.10 branch](https://github.com/nxhack/openwrt-node-packages/tree/openwrt-24.10) (***Current stable series***)
 
 On the host side, the following preparations are required.
 * [Unix prerequisites](https://github.com/nodejs/node/blob/master/BUILDING.md#unix-prerequisites)
 * To build a 32-bit target, gcc-multilib, g++-multilib are required.
+```
+sudo apt-get install gcc-multilib g++-multilib
+```
 * The libatomic package is required. (Install the 32-bit library at the same time, if necessary).
 
 ## Illegal instruction issue
@@ -72,7 +62,9 @@ ARM cores without vfp or neon (such as ***bcm53xx***) will not work either.
  Note: ICU currently supports only ***LITTLE ENDIAN***.
 
 ## Note about mDNS and homebridge
-***If you use node-homebridge(node-hap-nodejs), please install mDNS package (umdns / avahi-dbus-daemon / mdnsresponder).***
+Read this document: [mDNS Options](https://github.com/homebridge/homebridge/wiki/mDNS-Options)
+
+If you want, you can install the OpenWrt mDNS package (umdns / avahi-dbus-daemon / mdnsresponder).
 
 (1)
 Some OpenWrt / Lede images have built in dnscrypt-proxy package, which by default listening on 5353 port.
@@ -97,14 +89,17 @@ Please read this document. '[Why avahi and bonjour don't work on your home netwo
 
 ***IGMP-querier*** will solve your problem.
 
+OpenWrt allows "multicast_querier" (IGMP-querier) to be set when "igmp_snooping" is enabled.
+
 OpenWrt custom packages available: https://github.com/nxhack/openwrt-custom-packages
 
 ## Low memory
 Specify v8-options.
 
 ```
---max_old_space_size=80
+--optimize_for_size --max_old_space_size=128 --gc_interval=100
 ```
+For Reference: [Avoid Garbage](https://devcenter.heroku.com/articles/node-best-practices#avoid-garbage).
 
 Or use [swap](https://openwrt.org/docs/guide-user/storage/fstab?s[]=swap).
 
